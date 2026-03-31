@@ -1,0 +1,96 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # Daily at 9 AM UTC (5 AM ET)
+  workflow_dispatch: # Manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/danielmiessler/Personal_AI_Infrastructure.git || true
+          git fetch upstream main
+
+      - name: Check for new commits
+        id: check
+        run: |
+          BEHIND=$(git rev-list --count HEAD..upstream/main)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+          echo "Upstream is $BEHIND commits ahead"
+
+      - name: Fast-forward merge (no conflicts)
+        if: steps.check.outputs.behind != '0'
+        id: ff
+        run: |
+          if git merge --ff-only upstream/main 2>/dev/null; then
+            echo "result=fast-forward" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=diverged" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attempt auto-merge (diverged history)
+        if: steps.ff.outputs.result == 'diverged'
+        id: merge
+        run: |
+          git reset --hard origin/main
+          if git merge upstream/main --no-edit -m "chore: sync with upstream danielmiessler/Personal_AI_Infrastructure"; then
+            echo "result=merged" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push successful merge
+        if: steps.check.outputs.behind != '0' && steps.merge.outputs.result != 'conflict'
+        run: git push origin main
+
+      - name: Handle merge conflict — create PR
+        if: steps.merge.outputs.result == 'conflict'
+        run: |
+          git merge --abort
+          BRANCH="auto-sync/upstream-$(date +%Y-%m-%d)"
+          git checkout -b "$BRANCH"
+          git merge upstream/main --no-edit -m "chore: sync with upstream (conflicts)" || true
+
+          # Stage all conflict markers so the PR shows the diff
+          git add -A
+          git commit --no-edit -m "chore: sync upstream (has conflicts to resolve)" || true
+          git push -u origin "$BRANCH"
+
+          gh pr create \
+            --title "Upstream sync — merge conflicts need resolution" \
+            --body "$(cat <<'EOF'
+          ## Automatic upstream sync
+
+          The daily sync from `danielmiessler/Personal_AI_Infrastructure` has merge conflicts that need manual resolution.
+
+          **Conflicts must be resolved before merging this PR.**
+
+          To resolve locally:
+          ```bash
+          gh pr checkout $(gh pr list --head auto-sync/ --json number -q '.[0].number')
+          # fix conflicts, then:
+          git add -A && git commit && git push
+          ```
+          EOF
+          )" \
+            --head "$BRANCH" \
+            --base main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
