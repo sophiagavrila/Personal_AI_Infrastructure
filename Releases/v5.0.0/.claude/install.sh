@@ -246,4 +246,36 @@ fi
 # containing this install.sh — the root of the v5 release bundle.
 export PAI_BUNDLE_DIR="$SCRIPT_DIR"
 
-exec bun run "$INSTALLER_DIR/main.ts" --mode "$INSTALL_MODE"
+# Run the wizard. We deliberately do NOT exec here — once the wizard exits we
+# need to hand off to the user's interactive shell with `pai` already running.
+bun run "$INSTALLER_DIR/main.ts" --mode "$INSTALL_MODE"
+INSTALL_EXIT=$?
+
+# Post-wizard handoff. Three paths, in priority order:
+#
+# 1. Interactive TTY available (user ran `bash install.sh` directly, or CLI
+#    mode in a terminal): exec into zsh -i -c 'source ~/.zshrc && pai' so the
+#    user lands directly in pai in the same window. exec replaces this
+#    process — there's no return.
+#
+# 2. macOS without a TTY (the `curl https://ourpai.ai/install.sh | sh` path
+#    pipes stdin from curl, so [ -t 0 ] is false even though stdout is a
+#    terminal): use osascript to open a fresh Terminal window running pai.
+#    The user keeps their original terminal AND gets a new one with pai live.
+#
+# 3. Headless / no TTY / no osascript (Linux SSH, CI harness): print the
+#    explicit command so the user can run it themselves.
+if [ "$INSTALL_EXIT" -eq 0 ]; then
+  echo ""
+  if [ -t 0 ] && [ -t 1 ]; then
+    info "Launching pai..."
+    exec zsh -i -c 'source ~/.zshrc && pai'
+  elif [ "$(uname)" = "Darwin" ] && command -v osascript >/dev/null 2>&1; then
+    info "Opening a new Terminal window for pai..."
+    osascript -e 'tell application "Terminal" to do script "source ~/.zshrc && pai"' >/dev/null 2>&1 || \
+      info "Could not auto-launch — run:  ${BOLD}source ~/.zshrc && pai${RESET}"
+  else
+    info "Install complete. To start pai, run:  ${BOLD}source ~/.zshrc && pai${RESET}"
+  fi
+fi
+exit $INSTALL_EXIT

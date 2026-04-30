@@ -101,6 +101,13 @@ function handleServerMessage(msg) {
 
     case 'install_complete':
       renderSummary(msg.summary);
+      // Hand off to the launching shell. The wizard server stays up just long
+      // enough for the user to see the summary, then we close the window —
+      // electron/main.js's window-all-closed handler triggers app.quit(),
+      // which exits the bun child, which lets install.sh resume and exec the
+      // post-install `pai` handoff. 3s is the same beat as the success voice
+      // notification so the audio finishes before the window disappears.
+      setTimeout(() => { window.close(); }, 3000);
       break;
 
     case 'error':
