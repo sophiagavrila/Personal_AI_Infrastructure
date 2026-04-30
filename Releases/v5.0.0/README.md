@@ -147,25 +147,57 @@ PAI's privacy boundary is now enforced **at the file system level**, not by hand
 
 Skills are self-activating composable domain units. Your DA selects them at runtime based on intent. The public release ships **45 skills** (private skills with `_ALLCAPS` names stay in your install).
 
-Highlights of what's new or substantially evolved in v5.0.0:
+**This is the most skills any PAI release has ever shipped.** For reference: v3.0 shipped 41 flat skills, v4.0.3 shipped 36 leaf skills (47 SKILL.md files counting category wrappers). **v5.0.0 ships 45 individual top-level skills**, every one independently invocable.
 
-| Skill | What it does |
-|-------|--------------|
-| **ISA** | Owns the Ideal State Artifact primitive — scaffold, interview, check, reconcile, seed, append |
-| **Knowledge** | Typed graph archive (People, Companies, Ideas, Research, Blogs) with wikilinks + backlinks |
-| **Telos** | Read/update Mission, Goals, Beliefs, Wisdom, Books, Challenges, Wrong, Models, Narratives |
-| **Pulse** | (built in) — the daemon, dashboard, and observability surface |
-| **Interceptor** | Real-Chrome browser automation via extension — passes all major bot detection |
-| **Research** | 4-mode comprehensive research (Quick / Standard / Extensive / Deep Investigation) |
-| **Council** | Multi-agent collaborative debate with visible round-by-round transcripts |
-| **RedTeam** | 32-agent adversarial stress-test of ideas, strategies, plans |
-| **WorldThreatModel** | 11-horizon stress-test from 6 months to 50 years |
-| **Migrate** | Intake content from external sources (Obsidian, Notion, Apple Notes, .md) into PAI taxonomy with provenance |
-| **CreateSkill** | Skill scaffolding + canonicalization + Anthropic-methodology effectiveness testing |
-| **Interview** | Phased TELOS / IDEAL_STATE / preferences / identity capture (Phase 1–4) |
-| **ContextSearch** | 2-phase context recovery across the session registry, work directories, and ISAs |
-| **Fabric** | 240+ specialized prompt patterns, executed natively (no CLI for most) |
-| **Webdesign** | Drives Anthropic's Claude Design (claude.ai/design) via Interceptor |
+Below is the complete catalog — what each skill does, and how we actually use it day-to-day.
+
+| Skill | What it does | How we use it |
+|-------|--------------|---------------|
+| **Agents** | Compose CUSTOM agents from Base Traits + Voice + Specialization, plus 8 predefined functional teams (engineering, architecture, marketing, design, security, research, content, strategy). | Spinning up specialist team members for multi-perspective review; spawning parallel custom workers when each needs a distinct identity and voice. |
+| **ApertureOscillation** | 3-pass scope oscillation — holds the question constant while shifting tactical → strategic → synthesis envelopes. | Surfacing design tensions invisible at any single zoom level, typically before committing to an architecture or product decision. |
+| **Aphorisms** | Curated aphorism collection with content-based matching, themed search, thinker research, usage-history tracking. | Picking the closing aphorism for the newsletter; matching a quote to a draft post's theme without repeating one we already used. |
+| **Apify** | Scrape Instagram, LinkedIn, TikTok, YouTube, Facebook, Google Maps via Apify actors with auth-aware extraction. | Pulling profile/post data for research, competitive intelligence runs, and business-contact harvesting at scale. |
+| **Art** | Generate visuals via Flux, Nano Banana Pro, GPT-Image-1 — illustrations, Mermaid flowcharts, technical architecture diagrams, taxonomies, framework matrices. | Header art for blog posts; technical diagrams for architecture writeups; charcoal sketches for the Sales pipeline; D3 dashboards. |
+| **ArXiv** | Search and retrieve arXiv papers by topic/category/ID with AlphaXiv-enriched AI overviews. | Quick literature lookup before writing on a research-heavy topic; checking citation candidates without leaving the terminal. |
+| **AudioEditor** | Whisper word-level transcription → Claude segment classification → ffmpeg execution with crossfades and room-tone gap fill. | Cleaning up podcast and video recordings — strips fillers, false starts, stutters, and dead air automatically. |
+| **BeCreative** | Verbalized Sampling + extended thinking for divergent ideation; expands seed corpora into diverse N-example datasets. | Generating 5 internally-diverse candidates when a single answer feels too predictable; building eval datasets from a small seed. |
+| **BitterPillEngineering** | Audits any AI instruction set for over-prompting using the test "would a smarter model make this rule unnecessary?" | Trimming SKILL.md, agent prompts, and hooks before release; catching ceremony bloat in the Algorithm itself. |
+| **BrightData** | 4-tier progressive scraping with auto-escalation: WebFetch → curl → agent-browser → BrightData proxy. | Default web fetcher when Interceptor is overkill; escalates automatically through tiers when bot detection blocks the simpler ones. |
+| **Browser** | Headless agent-browser (Rust CLI daemon) with persistent auth profiles for fast, scriptable, parallel browser work. | Batch scraping logged-in sessions; automating repetitive web work where stored auth survives across runs. |
+| **ContextSearch** | 2-phase parallel scan of the session registry, work directories, ISAs, and session names. | Cold-starting a new session on existing work; resuming a paused project; "what was I doing on X two weeks ago." |
+| **Council** | Multi-agent collaborative debate with visible round-by-round transcripts and genuine intellectual friction. | When a decision benefits from disagreement made visible — not consensus, but multiple expert lenses arguing it out. |
+| **CreateCLI** | Generate production-ready TypeScript CLIs using a 3-tier template system (manual parsing → Commander → oclif). | Building new CLI tools from scratch with the right scaffolding for the actual scope. |
+| **CreateSkill** | Skill scaffolding + canonicalization + Anthropic-methodology effectiveness testing. | Standing up a new PAI skill; enforcing canonical structure; testing whether a skill actually fires when expected. |
+| **Daemon** | Manages the public daemon profile — a living digital representation of what you're working on, thinking about, reading, building. | Updating the public daemon site; deploying current project state with deterministic security filtering applied. |
+| **Delegation** | Six parallelization patterns: built-in agents, worktrees, background agents, custom agents, agent teams, agent OS. | The routing table for "should I delegate this, and which pattern fits?" before spawning anything. |
+| **Evals** | AI agent evaluation framework with code/model/human graders and pass@k / pass^k scoring. | Testing whether a skill or agent actually works; building eval suites for prompts and tool sequences. |
+| **ExtractWisdom** | Content-adaptive wisdom extraction that reads first, detects domains present, then builds custom sections around what it finds. | Distilling podcasts, articles, talks into structured insights; the engine behind harvest pipelines. |
+| **Fabric** | Execute 240+ specialized prompt patterns natively (no CLI required for most). | extract_wisdom, summarize, create_5_sentence_summary, create_threat_model — pulling battle-tested patterns instead of inventing from scratch. |
+| **FirstPrinciples** | Physics-style deconstruct → challenge → rebuild reasoning (Musk methodology). | Breaking through analogical reasoning when a problem feels stuck; rebuilding from constraints rather than precedent. |
+| **Ideate** | 9-phase evolutionary idea generation (Consume → Dream → Daydream → Contemplate → Steal → Mate → Test → Evolve → Meta-Learn). | Long-form idea generation when single-pass ideation runs dry; producing genuinely novel angles via cross-domain stealing. |
+| **Interceptor** | Real Chrome browser automation via extension — zero CDP fingerprint, passes all major bot detection (BrowserScan, CreepJS, Pixelscan). | Verifying every web change before declaring it done; testing logged-in flows on bot-protected sites. |
+| **Interview** | Phased conversational interview across all PAI context files (TELOS → IDEAL_STATE → preferences → identity). | Initial PAI personalization after install; periodic TELOS refresh; onboarding a new DA identity. |
+| **ISA** | Owns the Ideal State Artifact primitive — six workflows: Scaffold, Interview, CheckCompleteness, Reconcile, Seed, Append. | Every E2+ Algorithm run; the scaffolding for any project's "done" definition. |
+| **IterativeDepth** | Multi-angle exploration running 2-8 sequential passes from systematically different scientific lenses. | Surfacing requirements and edge cases invisible from any single angle — usually at THINK phase on hard problems. |
+| **Knowledge** | Manage the typed graph archive (People, Companies, Ideas, Research, Blogs) with wikilinks and backlinks. | Adding and searching durable notes; navigating the knowledge graph; harvesting from PAI sources into long-term memory. |
+| **Loop** | Iterative improvement loop that revisits a target across multiple full Algorithm cycles, with human review between iterations. | Polishing a skill, prompt, or document over N passes when one shot won't get there. |
+| **Migrate** | Intake content from external sources (Obsidian, Notion, Apple Notes, .md/.txt), classify against PAI taxonomy, commit with provenance. | Bringing prior personal-knowledge systems into PAI/USER/ on a fresh install or after a major reorganization. |
+| **Optimize** | Autonomous hill-climb loop against any target — metric mode for code, eval mode for prompts/skills/agents (LLM-as-judge). | Reducing latency, improving page speed, tightening a prompt against a rubric — autonomous improvement loops. |
+| **PAIUpgrade** | Generate prioritized PAI upgrade recommendations via 4 parallel threads (audit, user context, external research, skill drift). | Periodic "what should the system get better at" sweeps; processing fresh learnings from bookmarks and feed. |
+| **PrivateInvestigator** | Ethical people-finding and identity verification using 15 parallel research agents across aggregators, social, public records. | Background-check style research with consent; verifying online identities; finding contact info for legitimate outreach. |
+| **Prompting** | Meta-prompting standard library — Anthropic Claude 4.x best practices, context engineering, Fabric patterns, markdown-first. | Generating, optimizing, and composing prompts programmatically; the reference for every prompt-shaped artifact in PAI. |
+| **RedTeam** | 32 parallel expert agents (engineers, architects, pentesters, interns) adversarially stress-test ideas, strategies, plans. | Pre-mortem on a strategy or product launch; finding failure modes before users do. |
+| **Remotion** | Programmatic video with React via Remotion — sequences, motion graphics, useCurrentFrame() animations, MP4 render. | Auto-generated explainer videos from structured input; motion graphics with PAI brand consistency. |
+| **Research** | 4-depth modes (Quick / Standard / Extensive / Deep Investigation) with cross-checked multi-LLM agents. | Default research entry — Quick for fast lookups, Standard for cross-checked answers, Deep for multi-day investigations. |
+| **RootCauseAnalysis** | Five workflows grounded in TPS, Ishikawa, James Reason, Apollo, Google SRE — 5 Whys, Fishbone, Apollo, Swiss Cheese, Blameless Postmortem. | Incident postmortems; "this keeps happening" investigations; structured blame-free retrospectives. |
+| **Sales** | Transform product documentation into sales-ready narrative packages — story explanation + charcoal sketch art + talking points. | Generating pitch material from spec docs; emotional-register-aware narrative production for outbound. |
+| **Science** | The scientific method as universal problem-solving — DefineGoal, GenerateHypotheses (≥3 required), DesignExperiment, MeasureResults. | Forcing hypothesis-plurality on hard problems; designing falsifiable tests instead of confirming intuitions. |
+| **SystemsThinking** | Structural analysis grounded in Donella Meadows, Senge, Forrester, Ackoff — Iceberg, Causal Loops, leverage points. | When the same problem keeps recurring; mapping feedback loops before changing a complex system. |
+| **Telos** | Read/update Mission, Goals, Beliefs, Wisdom, Books, Movies, Challenges, Mental Models, Predictions, Traumas, Frames, Lessons-Learned, Wrong-Beliefs, Narratives, Strategies. | The Life OS spine — every recommendation traces back here. Daily check-ins, monthly reviews, planning sessions. |
+| **USMetrics** | Analyze 68 US economic and social indicators from FRED, EIA, Treasury FiscalData, BLS, Census APIs. | Background research for newsletter and podcast on US macro trends; quick lookup of CPI, unemployment, GDP, etc. |
+| **Webdesign** | Design and integrate web interfaces using Anthropic's Claude Design (claude.ai/design) driven through Interceptor. | Building UI prototypes; landing-page iteration; production-code handoff via the frontend-design plugin. |
+| **WorldThreatModel** | Persistent world-model harness stress-testing ideas against 11 time horizons (6 months to 50 years). | Strategy decisions with long tails; investment thinking; resilience planning against geopolitical, technology, economic shifts. |
+| **WriteStory** | Construct fiction across 7 simultaneous narrative layers — Storr, Pressfield, Forsyth frameworks. | Long-form fiction; story-driven content production; teaching narrative structure through a working pipeline. |
 
 ### 7. The Memory system v7.6 — compounding by design
 
