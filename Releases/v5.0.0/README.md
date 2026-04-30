@@ -19,7 +19,7 @@
 
 ---
 
-## Install — one line
+## One-Line Install
 
 ```bash
 curl -sSL https://ourpai.ai/install.sh | bash
