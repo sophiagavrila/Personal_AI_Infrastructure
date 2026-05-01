@@ -242,48 +242,7 @@ If you had personal content in v4.x (notes, project state, custom rules), tell y
 
 ## 📦 PAI Packs
 
-> [!NOTE]
-> **v5.0.0 ships skills directly** — 45 skills and 171 workflows are part of the base install. **Packs** below remain available as standalone, AI-installable capabilities for users who want a specific capability without installing all of PAI.
-
-Don't want to install all of PAI? **Packs** are standalone, AI-installable capabilities you can add one at a time. Each pack is self-contained — your AI reads the install guide and sets everything up for you. No PAI installation required.
-
-Point your AI at any pack and say "install this":
-
-```
-"Install the Research pack from PAI/Packs/Research/"
-```
-
-Your AI walks through a 5-phase wizard: system analysis, user questions, backup, installation, verification.
-
-### Available Packs
-
-| Pack | What It Does |
-|------|-------------|
-| [ContextSearch](Packs/ContextSearch/) | `/context-search` and `/cs` — instant recall of prior work sessions |
-| [Agents](Packs/Agents/) | Custom agent composition from traits, voices, and personalities |
-| [ContentAnalysis](Packs/ContentAnalysis/) | Wisdom extraction from videos, podcasts, articles, and YouTube |
-| [Investigation](Packs/Investigation/) | People search, identity verification, public-records investigation |
-| [Media](Packs/Media/) | AI image generation, diagrams, infographics, and Remotion video |
-| [Research](Packs/Research/) | Multi-agent research — quick, standard, extensive, deep — plus arXiv academic papers |
-| [Scraping](Packs/Scraping/) | Web scraping via Bright Data proxy and Apify social media actors |
-| [Telos](Packs/Telos/) | Life OS — goals, beliefs, wisdom, the ISA primitive, conversational interview, content migration |
-| [Thinking](Packs/Thinking/) | First principles, council, red team, science, systems thinking, root cause, aperture oscillation, evolutionary ideation, BPE |
-| [USMetrics](Packs/USMetrics/) | 68 US economic indicators from FRED, EIA, Treasury, BLS, Census |
-| [Utilities](Packs/Utilities/) | CLI generation, skill scaffolding, Fabric patterns, browser automation, Interceptor verification, knowledge archive, iterative loops, hill-climb optimization |
-
-Each pack works standalone — install one, install five, or install all of them. They're designed to give you PAI-level capabilities whether or not you run the full PAI system.
-
-### Coming Next (v5.0.x Pack Roadmap)
-
-These v5.0.0 skills ship in the base install today and will get standalone Packs in upcoming releases:
-
-| Planned Pack | Skill(s) | Capability |
-|------|------|------|
-| **Writing** | WriteStory | Fiction across seven narrative layers — Storr, Pressfield, Forsyth |
-| **Sales** | Sales | Sales-ready narrative + charcoal sketch + talking points pipeline |
-| **Webdesign** | Webdesign | Web/UI design via Claude Design (claude.ai/design) |
-| **Daemon** | Daemon | Public daemon profile — living digital presence, security-filtered |
-| **Security** *(rebuild)* | TBD | The previous Security pack bundled private-only skills; the v5.0.x rebuild will ship from a curated public-skill set |
+Packs are standalone, AI-installable capabilities you can add to any AI coding harness without installing PAI. Each pack is a self-contained prompt your DA can read and execute — point it at the pack directory and say "install this," and it handles the rest.
 
 **[Browse all packs →](Packs/)**
 
