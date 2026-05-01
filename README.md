@@ -166,6 +166,10 @@ A meaningful library of custom thinking skills — first principles, council deb
 > [!CAUTION]
 > **Project in Active Development** — PAI is evolving rapidly. Expect breaking changes, restructuring, and frequent updates.
 
+### Use your AI to install and run PAI
+
+We very much believe in AI-based installation and modification of PAI. Once you have a working install, point your AI at the system itself — upgrade versions, add skills, modify hooks, change settings, repair anything that breaks. The most important thing your AI can do for you up front is bring all of your existing custom context — notes, project state, preferences, identity, history — into the `PAI/USER/` directory so PAI knows who you are from day one. Tell your DA: *"Help me migrate my context into PAI/USER/."* The system was designed to be operated by AI; lean on it.
+
 ### One-line install (recommended)
 
 ```bash
