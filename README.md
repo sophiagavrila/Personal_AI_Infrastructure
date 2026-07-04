@@ -1,8 +1,8 @@
+<p align="center">
+  <img src="./lifeos-logo-full.png" alt="LifeOS" width="460">
+</p>
+
 <div align="center">
-
-<img alt="LifeOS" src="./images/lifeos-logo.png" width="240">
-
-# LifeOS
 
 **The Life Operating System**
 
@@ -21,128 +21,41 @@ LifeOS is a Life Operating System. It captures who you are, what you care about,
 
 ## Install
 
-**Give it to your AI.** Paste this into Claude Code (or any AI coding harness) and say **"install this"** — your AI does the whole setup for you.
+**Give it to your AI.** LifeOS is installed *by* an AI, so the install is just a prompt. Paste this into your AI coding harness — Claude Code, Cursor, Codex, or any capable agent — and it does the whole setup for you:
+
+> **Read https://ourlifeos.ai/install and install LifeOS for me.**
+
+Your AI reads the install page and walks the setup, asking permission before it touches anything.
+
+**Prefer the terminal?** There's a one-line shortcut for Claude Code on macOS/Linux:
 
 ```bash
 curl -fsSL https://ourlifeos.ai/install.sh | bash
 ```
 
-Prefer the terminal? Run the same command yourself. You'll need [Claude Code](https://docs.claude.com/claude-code) and [bun](https://bun.sh).
+Either path needs a capable AI coding harness — we build and run on [Claude Code](https://docs.claude.com/claude-code) — and [bun](https://bun.sh).
 
 ## Core Components
 
-**The unique features** — the parts you won't find anywhere else.
+**The unique features** — the parts you won't find anywhere else, plus the subsystems underneath. See them live and click through on **[ourlifeos.ai](https://ourlifeos.ai)**.
 
-<table>
-<tr>
-<td width="33%" valign="top" align="center">
-
-### 🎯
-**Current → Ideal State**
-
-Name where you are and where you want to be, then close the gap with steps you can check.
-
-</td>
-<td width="33%" valign="top" align="center">
-
-### 🧭
-**TELOS**
-
-Your mission, goals, beliefs, and challenges — the file the system reasons against.
-
-</td>
-<td width="33%" valign="top" align="center">
-
-### ⚙️
-**The Algorithm**
-
-A seven-phase engine that turns a vague ask into a testable spec and climbs toward it.
-
-</td>
-</tr>
-<tr>
-<td valign="top" align="center">
-
-### 🧩
-**The Skill System**
-
-100+ self-activating, composable units of expertise, each fired by a natural-language trigger.
-
-</td>
-<td valign="top" align="center">
-
-### 🪝
-**The Hook System**
-
-Guardrails that are code, not good intentions, enforced at fixed points every session.
-
-</td>
-<td valign="top" align="center">
-
-### 🔀
-**The Router System**
-
-Every prompt routed to the right effort and the right model, automatically.
-
-</td>
-</tr>
-<tr>
-<td valign="top" align="center">
-
-### 📊
-**Pulse**
-
-The Life Dashboard — the live surface where you watch the whole system run.
-
-</td>
-<td valign="top" align="center">
-
-### ✨
-**Custom Spinner Verbs**
-
-Your own animated working-verb and rotating tips in the statusline.
-
-</td>
-<td valign="top" align="center">
-
-### 💬
-**Custom Tooltips**
-
-The dashboard explains itself on hover instead of sending you to a manual.
-
-</td>
-</tr>
-</table>
-
-**The supporting components** — the subsystems underneath.
-
-<table>
-<tr>
-<td width="20%" valign="top" align="center"><b>🧠 Memory</b><br/><sub>Compounds across sessions.</sub></td>
-<td width="20%" valign="top" align="center"><b>🤖 Agents</b><br/><sub>Parallel delegation to specialists.</sub></td>
-<td width="20%" valign="top" align="center"><b>🔊 Voice</b><br/><sub>Spoken notifications in your voice.</sub></td>
-<td width="20%" valign="top" align="center"><b>🎓 Learning</b><br/><sub>Every run feeds the next.</sub></td>
-<td width="20%" valign="top" align="center"><b>🛡️ Security</b><br/><sub>Keeps private data private.</sub></td>
-</tr>
-</table>
+[![LifeOS core components — Current→Ideal State, General Hill Climbing, TELOS, the Algorithm, the ISA, the Skill System, the Hook System, the Router System, Pulse, custom spinner verbs and tooltips, plus the supporting subsystems: Memory, Agents, Voice, Learning, Security. Click to explore them live on ourlifeos.ai.](images/lifeos-core-components.png)](https://ourlifeos.ai)
 
 ---
 
-## 📦 Packs
+## 🧩 Skills
 
-Packs are standalone, AI-installable capabilities you can add to any AI coding harness without installing the full system. Each pack is a self-contained prompt your DA can read and execute — point it at the pack directory and say "install this," and it handles the rest.
+LifeOS installs as one self-contained skill that bundles the whole library — research, security, writing, art, and more. Browse them all on the site.
 
-**[Browse all packs →](Packs/)**
+**[Browse all skills →](https://ourlifeos.ai/skills)**
 
 ---
 
 ## ❓ FAQ
 
-### How is LifeOS different from just using Claude Code?
+### How is LifeOS different from using an AI harness on its own?
 
-LifeOS is built natively on Claude Code and designed to stay that way. We chose Claude Code because its hook system, context management, and agentic architecture are the best foundation available for personal AI infrastructure.
-
-LifeOS isn't a replacement for Claude Code — it's the layer on top that makes Claude Code *yours*:
+Your harness gives you raw capability. LifeOS is the layer on top that makes it *yours* — a system that knows your goals, people, and context, and keeps working toward them:
 
 - **Persistent memory** — Your DA remembers past sessions, decisions, and learnings
 - **Custom skills** — Specialized capabilities for the things you do most
@@ -150,19 +63,13 @@ LifeOS isn't a replacement for Claude Code — it's the layer on top that makes 
 - **Intelligent routing** — Say "research this" and the right workflow triggers automatically
 - **Self-improvement** — The system modifies itself based on what it learns
 
-Think of it this way: Claude Code is the engine. LifeOS is everything else that makes it *your* car.
+Your harness is the engine. LifeOS is everything else that makes it *your* car.
 
-### What's the difference between LifeOS and Claude Code's built-in features?
+### What harness does LifeOS run on?
 
-Claude Code provides powerful primitives — hooks, slash commands, MCP servers, context files. These are individual building blocks.
+Any high-end one. LifeOS is harness-agnostic by design — it's built on universal primitives (hooks, skills, context files, agentic routing), not one vendor's features. The code is TypeScript and Bash, and the core ideas — TELOS, the Algorithm, skills, memory — port to any capable agent.
 
-LifeOS is the complete system built on those primitives. It connects everything together: your goals inform your skills, your skills generate memory, your memory improves future responses. LifeOS turns Claude Code's building blocks into a coherent personal AI platform.
-
-### Is LifeOS only for Claude Code?
-
-LifeOS is Claude Code native. We believe Claude Code's hook system, context management, and agentic capabilities make it the best platform for personal AI infrastructure, and LifeOS is designed to take full advantage of those features.
-
-That said, LifeOS's concepts (skills, memory, algorithms) are universal, and the code is TypeScript and Bash — so community members are welcome to adapt it for other platforms.
+Daniel builds and runs it on [Claude Code](https://docs.claude.com/claude-code), so that's the most-tested path today. But LifeOS isn't locked to it, and it's designed to run wherever your AI does.
 
 ### How is this different from fabric?
 
@@ -277,7 +184,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 **v6.0.0 (2026-07-02) — One Skill, One Install**
 - **Skill-based distribution** — the whole system now ships as a single self-contained skill (`LifeOS/`): the orchestrator (SKILL.md + Workflows + Tools) plus a complete install payload (system prompt, Algorithm, 49 skills, hooks, agents, Pulse, statusline, USER + MEMORY scaffolds). One directory, one install.
 - **First release under the LifeOS name** — the project was PAI (Personal AI Infrastructure); this is the same system, renamed.
-- **One-line install** — `curl -fsSL https://ourlifeos.ai/install.sh | bash` lays down the entire system.
+- **Install by prompt** — hand it to your AI (*"Read https://ourlifeos.ai/install and install LifeOS for me"*); a `curl … | bash` shortcut lays it down from a terminal too.
 - **Full Pulse on first boot** — the installer stands up the Life Dashboard and menu-bar app, ships generic TELOS templates so the dashboard renders on a fresh install, and runs the setup interview to seed it.
 - **Algorithm v6.23.0** — Current State → Ideal State across seven phases, classifier-driven mode + tier, cross-vendor verification at E4/E5.
 - **Clean by construction** — nothing personal ships; the USER tree is a blank template you populate. Release gates + a cross-vendor audit run before every publish.
