@@ -100,7 +100,7 @@ The ten release-flavored workflows under `skills/_LIFEOS/Workflows/` (`CreateSha
 
 Adding a pattern: append the regex line under the right section in `DENY_LIST.txt`. The next precheck run picks it up; the next `ShadowRelease.ts` build picks it up at startup. No code to edit.
 
-Hard exclusions (kept OUT of the deny-list, intentionally): `github.com/danielmiessler/PAI` (legitimate public clone URL), `fTtv3eikoepIosk8dTZ5` (Algorithm voice, intentionally shipped).
+Hard exclusions (kept OUT of the deny-list, intentionally): `github.com/danielmiessler/LifeOS` (legitimate public clone URL), `fTtv3eikoepIosk8dTZ5` (Algorithm voice, intentionally shipped).
 
 ## What's NOT Here (and why)
 

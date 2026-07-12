@@ -45,7 +45,7 @@ Do not begin a partial install you can't finish.
 
 ### 2. Get the release and detect the environment
 
-Fetch the **latest** LifeOS release from `danielmiessler/LifeOS`. Resolve the newest published release with `curl -fsSL https://api.github.com/repos/danielmiessler/LifeOS/releases/latest` and read its `tag_name`, then download that tag's source tarball (`https://github.com/danielmiessler/LifeOS/archive/refs/tags/<tag>.tar.gz`, HTTPS, no auth) and extract the `LifeOS/` skill directory. (Or use a local release directory if your human already has one.) Then, from the LifeOS skill directory, run:
+Fetch the pinned LifeOS release for the repo and version on the install page (the tag tarball over HTTPS, no auth), or use a local release directory if given one. Then, from the LifeOS skill directory, run:
 
 ```
 bun Tools/DetectEnv.ts
@@ -82,7 +82,7 @@ Creates the personal config tree from templates and links it in. This is empty s
 
 This is the one place harnesses genuinely differ. Show the exact change and get a yes.
 
-- **Claude Code** — run `bun Tools/InstallHooks.ts` (merges the hook set into `settings.json`, backing it up first) and `bun Tools/ActivateImports.ts` (turns on the identity context imports). This is what lights up the always-on behavior: the mode banner, the memory loop, and per-turn context injection.
+- **Claude Code** — run `bun Tools/InstallHooks.ts` (merges the hook set into `settings.json`, backing it up first) and `bun Tools/ActivateImports.ts` (turns on the identity context imports). This is what lights up the always-on behavior: the LifeOS response format, the memory loop, and per-turn context injection.
 
 - **Any other harness (Cursor / Cline / Codex / Gemini / other)** — LifeOS's always-on behavior is enforced by Claude Code *hooks*, which are a Claude Code mechanism. They don't auto-wire on other harnesses **yet**. So instead:
   1. Write an `AGENTS.md` (or the harness's own context file — e.g. `.cursor/rules`) that points the harness at the LifeOS tree, so it loads the LifeOS context every session.
@@ -91,7 +91,7 @@ This is the one place harnesses genuinely differ. Show the exact change and get 
 
 ### 7. Wire the launch command — HOW LifeOS actually turns on (WITH PERMISSION)
 
-This is the step that makes LifeOS *load*. The constitutional layer — the mode banner, verification doctrine, security protocol, the whole operating contract — lives in `install/LIFEOS/LIFEOS_SYSTEM_PROMPT.md` and is **NOT** loaded by a plain `claude` session. It loads only when the harness is launched with that file appended to its system prompt. So installed LifeOS needs its own launch command; running vanilla `claude` gives you CLAUDE.md but **not** the constitution.
+This is the step that makes LifeOS *load*. The constitutional layer — the response format, verification doctrine, security protocol, the whole operating contract — lives in `install/LIFEOS/LIFEOS_SYSTEM_PROMPT.md` and is **NOT** loaded by a plain `claude` session. It loads only when the harness is launched with that file appended to its system prompt. So installed LifeOS needs its own launch command; running vanilla `claude` gives you CLAUDE.md but **not** the constitution.
 
 The payload ships the launcher — `install/LIFEOS/TOOLS/lifeos.ts` — which spawns Claude with `--append-system-prompt-file <configRoot>/LIFEOS/LIFEOS_SYSTEM_PROMPT.md` (plus the banner and MCP-profile handling). Wire a `lifeos` command that calls it into your human's shell. **Show the exact line, back up the rc file first, wait for a yes.** Use the real `<configRoot>` from `DetectEnv` (e.g. `~/.claude`) — never hardcode a home path.
 
@@ -110,15 +110,15 @@ bun <configRoot>/LIFEOS/TOOLS/lifeos.ts -s <configRoot>/LIFEOS/LIFEOS_SYSTEM_PRO
 
 ### 8. Choose the components — install all, or pick a subset (WITH PERMISSION)
 
-LifeOS installs in **two tiers**, and you present them that way.
+LifeOS installs in **two layers**, and you present them that way.
 
-**Core** (steps 4–7, always together) IS LifeOS: the skill + the full **~50-skill library** + the LIFEOS runtime (Algorithm, docs, tools, statusline binary, version) + the USER tree + the system prompt and its `lifeos` launch command. One consent installs all of Core; declining means not installing LifeOS.
+**Core** (steps 4–7, always together) IS LifeOS: the skill + the full **skill library** + the LIFEOS runtime (Algorithm, docs, tools, statusline binary, version) + the USER tree + the system prompt and its `lifeos` launch command. One consent installs all of Core; declining means not installing LifeOS.
 
 **Enhancements** are **à la carte** — offer them and let your human pick some, all, or none. Each is independently installed, idempotent, and reversible:
 
 | Component | What it adds | Default |
 |---|---|---|
-| **hooks** | mode routing, the memory loop, voice, per-turn context injection — most behavior needs these (this is step 6) | **recommended** |
+| **hooks** | skill routing, the memory loop, voice, per-turn context injection — most behavior needs these (this is step 6) | **recommended** |
 | **statusline** | the LifeOS status line in your prompt | optional |
 | **tooltips** | custom Claude Code spinner tips | optional |
 | **spinner verbs** | custom spinner verbs | optional |
@@ -136,7 +136,7 @@ Run the **Setup** workflow (`Workflows/Setup.md`) to finish integration and veri
 
 ## What you get on each setup (be honest about this)
 
-| Harness / OS | Skill + USER data + Pulse | Always-on behavior (mode banner, memory loop, context injection) |
+| Harness / OS | Skill + USER data + Pulse | Always-on behavior (response format, memory loop, context injection) |
 |---|---|---|
 | **Claude Code — macOS / Linux** | ✅ | ✅ full (native hooks) |
 | **Claude Code — Windows** | ✅ (copy fallback where symlinks need admin) | ✅ full |

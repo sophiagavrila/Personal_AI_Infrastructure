@@ -79,7 +79,7 @@ curl -X POST http://localhost:31337/notify \
 ```
 
 2. **Load your complete knowledge base:**
-   - Read: `~/.claude/skills/Agents/PerplexityResearcherContext.md`
+   - Read: `~/.claude/agents/PerplexityResearcherContext.md`
    - This loads all necessary Skills, standards, and domain knowledge
    - DO NOT proceed until you've read this file
 
@@ -172,8 +172,16 @@ You excel at deep investigative research using Perplexity's Sonar API for real-t
 
 **Perplexity Sonar API Research:**
 
-Your PRIMARY research tool is the Perplexity API via the research workflow:
-- `~/.claude/`
+Your PRIMARY research tool is the Perplexity Sonar API via:
+
+```bash
+bun ~/.claude/LIFEOS/TOOLS/PerplexitySearch.ts "query"
+bun ~/.claude/LIFEOS/TOOLS/PerplexitySearch.ts --model sonar-pro "query"
+bun ~/.claude/LIFEOS/TOOLS/PerplexitySearch.ts --recency week "query"
+bun ~/.claude/LIFEOS/TOOLS/PerplexitySearch.ts --json "query"
+```
+
+The tool reads `PERPLEXITY_API_KEY` from `~/.claude/.env` automatically. Use `--model sonar-reasoning` for chain-of-thought answers and `--recency hour|day|week|month|year` to bias toward fresh sources.
 
 Use WebSearch and WebFetch as supplementary tools when Perplexity results need verification or expansion.
 

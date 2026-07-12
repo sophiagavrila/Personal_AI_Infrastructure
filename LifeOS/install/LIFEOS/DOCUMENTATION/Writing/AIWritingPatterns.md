@@ -29,6 +29,7 @@ Not all AI-isms are equal. Prioritize by tier during audits.
 - Formulaic openings ("In the rapidly evolving world of...")
 - Bold overuse (more than one bolded phrase per major section)
 - Em dash frequency (above 1 per 1,000 words)
+- Spaced em dashes (`word — word`) — em dashes are always closed: `word—word`, no spaces on either side
 - Contrasting structures ("It's not X. It's Y." — the #1 AI cliche)
 - Formulaic transitions ("Here's the thing...", "Here's how this works...")
 - Novelty inflation ("He introduced a term", "a failure mode nobody's naming")

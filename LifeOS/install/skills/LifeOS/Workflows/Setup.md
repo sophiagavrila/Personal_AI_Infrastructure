@@ -24,6 +24,7 @@ The skill ships everything for both tiers in its payload; nothing activates with
    - **If `isDevTree` → STOP.** Never mutate the author's source repo. Print the refusal and exit.
 2. **ScanConflicts** (read-only) — `bun Tools/ScanConflicts.ts` → existing settings hooks, skill-name collisions, existing populated config tree. Produces the branch decision for `LinkUser`.
 3. **Prereqs** — confirm `bun` present; confirm harness is one of the supported set; surface any missing prerequisite as a plain-language fix, do not auto-install system packages.
+   - **If `harness.confidence` is `"assumed"`, confirm the harness with the user before branching** — detection was a guess (config dir without the harness binary, or the clean-machine default), and a leftover `~/.claude` dir must not send a non-Claude-Code install down the Claude Code path (hooks + `lifeos` alias both require the `claude` CLI). Ask which harness is actually running this setup, and branch on the answer.
 ### — LifeOS Core (steps 4–6, 8; one consent) —
 
 4. **System overlay** — place the harness-root system files (each `existsSync`-guarded — never clobber a populated harness):

@@ -65,6 +65,8 @@ Every surface reads `WORK.REPO`, the kanban columns, and the project→property 
 
 ### 1. SessionEnd hook — `hooks/ULWorkSync.hook.ts`
 
+> **Private component — NOT in the public release payload.** `hooks/ULWorkSync.hook.ts` and the `_ULWORK` skill are principal-specific (they target the private UL work repo) and are rsync-excluded from public releases, the same as any underscore-prefixed private skill. This capture surface runs on the principal's own install only; a fresh public install ships without it.
+
 Fires on every session end. Looks up the session UUID against `MEMORY/STATE/work.json`, locates the ISA, decides whether to sync.
 
 **Sync gates:**
@@ -171,7 +173,8 @@ A `<da-name>-can-take` label serves as the queue marker for "the DA should pick 
 
 | Layer | Lives in | Contains | Ships in release? |
 |-------|----------|----------|-------------------|
-| **System code** | `~/.claude/hooks/`, `~/.claude/LIFEOS/PULSE/`, `~/.claude/LIFEOS/TOOLS/`, `~/.claude/skills/_ULWORK/` | Hooks, modules, CLIs, skill workflows | YES — scrubbed, public-clean |
+| **System code (public)** | `~/.claude/LIFEOS/PULSE/`, `~/.claude/LIFEOS/TOOLS/`, generic capture hooks under `~/.claude/hooks/` | Modules, CLIs, generic hooks | YES — scrubbed, public-clean |
+| **Private components** | `~/.claude/skills/_ULWORK/`, `~/.claude/hooks/ULWorkSync.hook.ts` | Underscore-private skill + principal-specific SessionEnd capture hook (target the private UL work repo) | NO — rsync-excluded from the public release payload, same as any underscore-prefixed private skill |
 | **User config** | `~/.claude/LIFEOS/USER/WORK/` | `labels.yml`, `config.yaml`, `work_repo.json`, `README.md` | NO — USER zone, excluded by containment |
 | **Templates for new users** | `~/.claude/skills/_LIFEOS/RELEASE_TEMPLATES/WORK_REPO/` | README template, TASKLIST starter, .github/labels.yml, ISSUE_TEMPLATE, workflows | YES — placeholder substitution at user-setup time (planned, not yet built) |
 | **Live repo** | The configured private GitHub repo | Issues, TASKLIST.md, README, SOPs, CHANGELOG | NO — user's private property |
