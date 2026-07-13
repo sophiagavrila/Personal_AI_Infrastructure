@@ -2,6 +2,7 @@
 last_updated: 2026-07-11
 last_updated_by: kai
 convention: pai-freshness-v1
+version: 1.0.22
 ---
 
 # Pulse Metadata Surface — Badges, Strips, Panels
@@ -144,4 +145,4 @@ Multi-line expandable detail views shown on session click.
 - Pulse System overview: `LIFEOS/DOCUMENTATION/Pulse/PulseSystem.md`
 - DA subsystem (design): `LIFEOS/DOCUMENTATION/Pulse/DaSubsystem.md`
 - Terminal tabs (kitty integration): `LIFEOS/DOCUMENTATION/Pulse/TerminalTabs.md`
-- Current Algorithm doctrine: `LIFEOS/ALGORITHM/v8.3.0.md`
+- Current Algorithm doctrine: `LIFEOS/ALGORITHM/v8.4.0.md`

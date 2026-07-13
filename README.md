@@ -24,8 +24,8 @@
 
 <!-- Content -->
 [![Get Started](https://img.shields.io/badge/🚀_Get_Started-Install-22C55E?style=flat)](#install)
-[![Release](https://img.shields.io/badge/Release-v7.0.0-8B5CF6?style=flat)](https://github.com/danielmiessler/LifeOS/releases)
-[![Algorithm](https://img.shields.io/badge/Algorithm-v8.3.0-D97706?style=flat)](https://github.com/danielmiessler/LifeOS/releases)
+[![Release](https://img.shields.io/badge/Release-v7.1.1-8B5CF6?style=flat)](https://github.com/danielmiessler/LifeOS/releases)
+[![Algorithm](https://img.shields.io/badge/Algorithm-v8.4.0-D97706?style=flat)](https://github.com/danielmiessler/LifeOS/releases)
 [![Pulse](https://img.shields.io/badge/Pulse-included-3B82F6?style=flat)](https://ourlifeos.ai)
 [![Contributors](https://img.shields.io/github/contributors/danielmiessler/LifeOS?style=flat&logo=githubsponsors&logoColor=white&label=Contributors&color=EC4899)](https://github.com/danielmiessler/LifeOS/graphs/contributors)
 
@@ -41,11 +41,13 @@
 
 ---
 
+https://github.com/user-attachments/assets/31668ca9-25bf-4823-a7d2-85df9140ecf6
+
 **LifeOS** is a General Purpose AI Harness for doing anything you want to do in life and work with AI. It captures who you are, what you care about, and where you're trying to go, then uses AI that knows you to help you get there. 
 
 And because it has your full context, it makes everything you do more efficient and effective, from building apps, to starting a business, to creative projects…_basically anything_.
 
-The whole system works on one centeral concept: moving from your Current State to your Ideal State in pursuit of Euphoric Surprise.
+The whole system works on one central concept: moving from your Current State to your Ideal State in pursuit of Euphoric Surprise.
 
 <div align="center">
 
@@ -220,6 +222,14 @@ MIT License - see [LICENSE](LICENSE) for details.
 <summary><strong>📜 Update History</strong></summary>
 
 <br/>
+
+**v7.1.1 — Install Awareness**
+- **Doctor** — `bun LIFEOS/TOOLS/Doctor.ts` reports the real state of every optional capability (live, broken, declined, stale) and reconciles hooks on disk against what's registered.
+- **Capability-aware install** — the installer asks now/later/never per optional capability and records the choice; failure-aware nudges surface the exact fix command when a broken capability trips.
+- **System Health in Pulse** — capability states, fix commands, and heartbeats on the hooks page.
+- **Algorithm v8.4.0** — plain-language depth steering registers before a run opens; nudges bounded to a single line.
+- **Community fixes** — #1450, #1456, #1463, #1470, #1471. Thanks to the contributors.
+- [Full release notes](https://github.com/danielmiessler/LifeOS/releases)
 
 **v7.0.0 — The Bitter Pill Release**
 - **Bitter Pill Engineering** — scaffolding cut across the whole system on one test: would a smarter model make this rule unnecessary? Reasoning choreography, self-scores, and duplicated routing are gone; the verification kernel stays.

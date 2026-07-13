@@ -11,12 +11,31 @@ set -o pipefail
 # CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Hook/statusline spawn contexts can arrive with $HOME unset (LifeOS#1463).
+# Resolve the real home before any path is built; never trust a bare $HOME.
+if [ -z "$HOME" ]; then
+    HOME="$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f6)"
+    [ -z "$HOME" ] && HOME="$(eval echo "~$(id -un)" 2>/dev/null)"
+fi
+
 LIFEOS_DIR="${LIFEOS_DIR:-$HOME/.claude/LIFEOS}"
 # Claude Code injects settings.json env values without shell expansion (LifeOS#1404):
 # a shipped value of "$HOME/.claude/LIFEOS" arrives literal. Expand it here.
 LIFEOS_DIR="${LIFEOS_DIR/#\$HOME/$HOME}"
 LIFEOS_DIR="${LIFEOS_DIR/#\$\{HOME\}/$HOME}"
 LIFEOS_DIR="${LIFEOS_DIR/#\~\//$HOME/}"
+
+# Fail closed (LifeOS#1463): a non-absolute or still-unexpanded LIFEOS_DIR would
+# make every cache write land relative to CWD (a literal '$HOME/' dir polluting
+# whatever repo the session runs in). Refuse to run rather than write garbage.
+case "$LIFEOS_DIR" in
+    /*) ;;
+    *)  echo "LifeOS"; exit 0 ;;
+esac
+case "$LIFEOS_DIR" in
+    *'$HOME'*|*'${HOME}'*|*'~'*) echo "LifeOS"; exit 0 ;;
+esac
+
 CLAUDE_HOME="$HOME/.claude"
 SETTINGS_FILE="$CLAUDE_HOME/settings.json"
 RATINGS_FILE="$LIFEOS_DIR/MEMORY/LEARNING/SIGNALS/ratings.jsonl"
@@ -818,6 +837,28 @@ if [ "$MODE" = "normal" ]; then
         fi
     }
 
+    # Emit fields that exist ONLY in the OAuth payload — never in Claude Code's
+    # native rate_limits (verified against real stdin 2026-07-12): the limits[]
+    # array (scoped per-model window e.g. Fable, plus per-window is_active
+    # flags) and the spend object (usage-credits pool, incl. disabled state).
+    # Appended after the base usage.sh so these lines win when sourced.
+    _emit_cache_enrichment() {
+        [ -f "$USAGE_CACHE" ] || return 0
+        jq -r '
+            ([.limits[]? | select(.scope.model? != null)] | first) as $sc |
+            "usage_scoped_present=" + (($sc != null) | tostring) + "\n" +
+            "usage_scoped_name=" + (($sc.scope.model.display_name // "") | ascii_upcase | @sh) + "\n" +
+            "usage_scoped_pct=" + ($sc.percent // 0 | tostring) + "\n" +
+            "usage_scoped_reset=" + ($sc.resets_at // "" | @sh) + "\n" +
+            "usage_scoped_active=" + ($sc.is_active // false | tostring) + "\n" +
+            "usage_5h_active=" + (([.limits[]? | select(.kind == "session") | .is_active] | first // false) | tostring) + "\n" +
+            "usage_7d_active=" + (([.limits[]? | select(.kind == "weekly_all") | .is_active] | first // false) | tostring) + "\n" +
+            "usage_spend_used_cents=" + (.spend.used.amount_minor // 0 | tostring) + "\n" +
+            "usage_spend_limit_cents=" + (.spend.limit.amount_minor // 0 | tostring) + "\n" +
+            "usage_spend_enabled=" + (.spend.enabled // false | tostring)
+        ' "$USAGE_CACHE" 2>/dev/null
+    }
+
     if [ "$has_native_rate_limits" = "true" ]; then
         # Native rate_limits available — use directly, skip OAuth API entirely.
         # Presence is tri-state and per-source (P1): a present 0% is real data
@@ -842,19 +883,20 @@ usage_extra_limit=${native_usage_extra_limit:-0}
 usage_extra_used=${native_usage_extra_used:-0}
 usage_ws_cost_cents=0
 USAGEEOF
-        # Native payload has no extra_usage — enrich from the OAuth cache so the
-        # EXT indicator and E:$ credits readout can render. Appended lines win
-        # over the native false/0 defaults when usage.sh is sourced. Skipped if
-        # a future Claude Code version starts shipping extra_usage natively.
-        if [ "${native_usage_extra_enabled:-false}" != "true" ]; then
-            _refresh_usage_cache
-            if [ "$_data_age" -lt "$USAGE_HARD_EXPIRY" ] && jq -e '.extra_usage.is_enabled == true' "$USAGE_CACHE" >/dev/null 2>&1; then
+        # Native payload has no extra_usage, limits[], or spend — enrich from
+        # the OAuth cache so the EXT indicator, credits readout, scoped-model
+        # (Fable) window, and active-window flags can render. Appended lines
+        # win over the native false/0 defaults when usage.sh is sourced.
+        _refresh_usage_cache
+        if [ "$_data_age" -lt "$USAGE_HARD_EXPIRY" ]; then
+            if [ "${native_usage_extra_enabled:-false}" != "true" ] && jq -e '.extra_usage.is_enabled == true' "$USAGE_CACHE" >/dev/null 2>&1; then
                 jq -r '
                     "usage_extra_enabled=true\n" +
                     "usage_extra_limit=" + (.extra_usage.monthly_limit // 0 | tostring) + "\n" +
                     "usage_extra_used=" + (.extra_usage.used_credits // 0 | tostring)
                 ' "$USAGE_CACHE" >> "$_parallel_tmp/usage.sh" 2>/dev/null
             fi
+            _emit_cache_enrichment >> "$_parallel_tmp/usage.sh"
         fi
     else
         # Fallback: fetch from OAuth API (pre-v2.1.80 or non-Claude.ai auth)
@@ -881,6 +923,7 @@ USAGEEOF
                 "usage_ws_cost_cents=0"
             ' "$USAGE_CACHE" > "$_parallel_tmp/usage.sh" 2>/dev/null
             echo "usage_data_age=$_data_age" >> "$_parallel_tmp/usage.sh"
+            _emit_cache_enrichment >> "$_parallel_tmp/usage.sh"
         else
             echo -e "usage_source=oauth\nusage_state=absent\nusage_5h=0\nusage_7d=0\nusage_extra_enabled=false\nusage_ws_cost_cents=0\nusage_no_data=true" > "$_parallel_tmp/usage.sh"
         fi
@@ -1429,6 +1472,19 @@ done
 printf "%b\n" "$_pm_line"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# DOCTOR — delta-only capability line (#1461 v2 design). Renders ONLY when a
+# capability newly regressed since the last `Doctor.ts ack`; healthy = silent.
+# Content precomputed by LIFEOS/TOOLS/Doctor.ts into a sidecar — bare cat here.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_doctor_sidecar="$LIFEOS_DIR/MEMORY/STATE/capabilities-statusline.txt"
+if [ "$MODE" = "normal" ] && [ -s "$_doctor_sidecar" ]; then
+    # Color via %b (escape codes), file content via %s so a tampered sidecar
+    # can't inject terminal escape sequences through the status line.
+    printf "%b%s%b\n" "${YELLOW:-}" "$(cat "$_doctor_sidecar")" "${RESET:-}"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MEMORY — one line directly under STATE: autonomic-loop health + hot-layer fill.
 # Rendered every 1s tick straight from state files (zero model involvement).
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1553,32 +1609,72 @@ _model_display="${model_name// context/}"
 _model_display=$(printf '%s' "$_model_display" | tr '[:lower:]' '[:upper:]')
 printf "${SLATE_400}HARN:${RESET} ${LIFEOS_A}${_har_display}${RESET} ${SLATE_600}│${RESET} ${SLATE_400}DEF MODEL:${RESET} ${LIFEOS_A}${_model_display}${RESET} ${SLATE_600}│${RESET} ${SLATE_400}LIFEOS:${RESET} ${LIFEOS_A}${LIFEOS_VERSION}${RESET} ${SLATE_600}│${RESET} ${SLATE_400}ALGO:${RESET} ${LIFEOS_A}${ALGO_VERSION}${RESET}\n"
 
-# ── AGENTS roster — which model the ROUTER assigns delegated agents at the current
-# mode/tier (persistent; "not only the default model, but the models the agents run
-# on"). This is the BASE routing posture; the ▸ LIVE line below is the corrector for
-# actual dispatches (incl. Core-System Override, which forces max at any tier).
-# Distinct from MODEL above (the main-loop orchestrator).
+# ── AGENTS roster — LIVE readout of dispatched-agent models. Source of truth is
+# agent-starts.json, written by AgentInvocation.hook.ts (v1.3.1, observe-only).
+# Router/modes/tiers retired 2026-07-11: there is NO assigned posture to show —
+# a rung lights BOLD only while work resolved to it is actually running (same
+# 300s cutoff as ▸ LIVE; the file accumulates orphans from killed agents, so
+# 5 min = "actually in flight"). Idle = every rung dim ("grayed out",
+# principal 2026-07-12). Distinct from DEF MODEL above (the main-loop model).
 #
-# Model LABELS are READ from EFFORT_MODEL/CROSS_VENDOR in models.ts (single source of
-# truth) — a lineup flip (e.g. max→opus) re-labels the roster automatically, no edit
-# here. Base posture is static since modes/tiers were removed (2026-07-11):
-# high (Opus) is the primary rung; SONNET/HAIKU are the medium/low utility rungs.
+# Model LABELS are READ from EFFORT_MODEL/CROSS_VENDOR in models.ts (single
+# source of truth) — a lineup flip re-labels the roster automatically.
 #
-# _pm_roster_states: pure, unit-testable. Echoes 5 rung states in fixed rung order
-#   "max high medium low forge"  —  2 = primary here   1 = utility rung   0 = off
-# Forge is ALWAYS 0 here (principal 2026-07-06): tier posture ("Forge binds at
-# E3+") no longer lights GPT-5.6 — only a LIVE in-flight Forge dispatch does
-# (override just below the read).
+# Rung sources (all within the 300s window):
+#   low/medium/high — live Agent dispatches by resolved model. "inherited" maps
+#     through the session model. Fable-labeled/-inherited dispatches map to the
+#     FABLE rung only when models.ts DISPATCH_EXECUTES_FABLE is true (probed
+#     2026-07-12: dispatches now execute faithfully; CarrierProbe.ts keeps the
+#     fact fresh) — false maps them to OPUS, the old downgrade reality.
+#   max (FABLE)     — a live fable dispatch (per the constant above), OR a
+#     model-verification.jsonl entry whose EXECUTED model is fable
+#     (Inference.ts post-hoc proof; a downgraded run has executed=opus
+#     and correctly does not light this rung).
+#   GPT-5.6 / GROK  — live cross-vendor dispatch (forge/codexResearcher → OpenAI,
+#     grokResearcher → xAI), matched on the resolved model string.
+#
+# _pm_roster_states: pure, unit-testable. Args: $1 session model, $2 space-joined
+# live dispatch models, $3 fable-verified flag (0/1), $4 dispatch-executes-fable
+# (true/false). Echoes 6 states in fixed rung order "max high medium low forge
+# grok" — 2 = live now, 0 = idle (dim). Several rungs can be live at once.
 _pm_roster_states() {
-    # Modes/tiers removed 2026-07-11: base posture is static — high (Opus) is the
-    # primary dispatch rung; Core-System max overrides surface via the ▸ LIVE line.
-    printf '0 2 1 1 0'
+    local _session="$1" _live="$2" _fable="$3" _df="$4"
+    local s_max=0 s_high=0 s_med=0 s_low=0 s_forge=0 s_grok=0 m
+    [ "$_fable" = "1" ] && s_max=2
+    # The session (main-loop) model is ALWAYS active — light its rung whether or
+    # not any agent is dispatched. This is what "ACTIVE" answers: the model you're
+    # talking to right now, plus any live dispatches layered on top.
+    case "$_session" in
+        *[Hh]aiku*)  s_low=2 ;;
+        *[Ss]onnet*) s_med=2 ;;
+        *[Ff]able*)  s_max=2 ;;
+        *[Oo]pus*)   s_high=2 ;;
+    esac
+    for m in $_live; do
+        case "$m" in
+            *grok*)         s_grok=2 ;;
+            *gpt-*)         s_forge=2 ;;
+            *haiku*)        s_low=2 ;;
+            *sonnet*)       s_med=2 ;;
+            *fable*)        if [ "$_df" = "true" ]; then s_max=2; else s_high=2; fi ;;
+            *opus*)         s_high=2 ;;
+            inherited)
+                case "$_session" in
+                    *[Hh]aiku*)  s_low=2 ;;
+                    *[Ss]onnet*) s_med=2 ;;
+                    *[Ff]able*)  if [ "$_df" = "true" ]; then s_max=2; else s_high=2; fi ;;
+                    *)           s_high=2 ;;  # opus, unknown
+                esac ;;
+            *)              s_high=2 ;;
+        esac
+    done
+    printf '%s %s %s %s %s %s' "$s_max" "$s_high" "$s_med" "$s_low" "$s_forge" "$s_grok"
 }
 
 if [ "$MODE" = "normal" ]; then
-    # Resolve rung → model NAME from models.ts (same source the MODEL line + the
-    # AgentInvocation hook read). Fallbacks keep the line honest if models.ts is
-    # unreadable in a hook-spawn context.
+    # Resolve rung → model NAME from models.ts (same source the AgentInvocation
+    # hook reads). Fallbacks keep the line honest if models.ts is unreadable in
+    # a hook-spawn context.
     _pm_models_ts="$LIFEOS_DIR/TOOLS/models.ts"
     _em_block=$(sed -n '/export const EFFORT_MODEL/,/^}/p' "$_pm_models_ts" 2>/dev/null)
     _em_lookup() { printf '%s' "$_em_block" | sed -n "s/^[[:space:]]*$1:[[:space:]]*\"\([a-z0-9-]*\)\".*/\1/p" | head -1 | tr '[:lower:]' '[:upper:]'; }
@@ -1586,60 +1682,79 @@ if [ "$MODE" = "normal" ]; then
     _lbl_high=$(_em_lookup high);  _lbl_high="${_lbl_high:-OPUS}"
     _lbl_med=$(_em_lookup medium); _lbl_med="${_lbl_med:-SONNET}"
     _lbl_low=$(_em_lookup low);    _lbl_low="${_lbl_low:-HAIKU}"
-    _lbl_forge=$(sed -n '/export const CROSS_VENDOR/,/^}/p' "$_pm_models_ts" 2>/dev/null | sed -n 's/^[[:space:]]*forge:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1 | tr '[:lower:]' '[:upper:]')
-    _lbl_forge="${_lbl_forge:-GPT-5.6}"
+    # Cross-vendor labels: model string minus the "-sol" codename suffix
+    # (display "GPT-5.6", not "GPT-5.6-SOL"), uppercased.
+    _cv_block=$(sed -n '/export const CROSS_VENDOR/,/^}/p' "$_pm_models_ts" 2>/dev/null)
+    _cv_lookup() { printf '%s' "$_cv_block" | sed -n "s/^[[:space:]]*$1:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1 | sed 's/-sol$//' | tr '[:lower:]' '[:upper:]'; }
+    _lbl_forge=$(_cv_lookup forge);         _lbl_forge="${_lbl_forge:-GPT-5.6}"
+    _lbl_grok=$(_cv_lookup grokResearcher); _lbl_grok="${_lbl_grok:-GROK}"
+    # Carrier fact from models.ts (CarrierProbe.ts-maintained): decides whether
+    # fable-labeled/-inherited dispatches light FABLE or OPUS. Unreadable → false
+    # (conservative: never claim Fable ran without the fact in hand).
+    _dispatch_fable=$(sed -n 's/^export const DISPATCH_EXECUTES_FABLE = \([a-z]*\).*/\1/p' "$_pm_models_ts" 2>/dev/null)
+    _dispatch_fable="${_dispatch_fable:-false}"
 
-    read -r _rs_max _rs_high _rs_med _rs_low _rs_forge \
-        <<< "$(_pm_roster_states)"
-    # GPT-5.6 lights ONLY while a Forge dispatch is actually in flight. Keyed off
-    # the SAME 300s cutoff as the ▸ LIVE line — agent-starts.json accumulates
-    # orphaned entries (synthetic tests, killed agents whose PostToolUse cleanup
-    # never fired), so any generous window keeps a long-dead Forge lit. The 2h
-    # window did exactly that (a 55-min-old synthetic forge orphan lit +GPT-5.6
-    # with nothing running). 5 min = "actually in flight."
-    _forge_starts="$LIFEOS_DIR/MEMORY/OBSERVABILITY/agent-starts.json"
-    if [ -f "$_forge_starts" ]; then
-        _forge_live=$(jq -r --argjson cutoff "$(( (NOW_EPOCH - 300) * 1000 ))" '
+    # Live dispatch models in the 300s window (unique resolved-model strings;
+    # pre-v1.3.1 entries lack .model → treated as inherited).
+    _agent_starts="$LIFEOS_DIR/MEMORY/OBSERVABILITY/agent-starts.json"
+    _live_models=""
+    if [ -f "$_agent_starts" ]; then
+        _live_models=$(jq -r --argjson cutoff "$(( (NOW_EPOCH - 300) * 1000 ))" '
             [to_entries[] | .value | select(.epoch > $cutoff)
-             | select((.subagent_type // "") | test("forge"; "i"))] | length
-        ' "$_forge_starts" 2>/dev/null)
-        [ "${_forge_live:-0}" -gt 0 ] 2>/dev/null && _rs_forge=2
+             | (.model // "inherited")] | unique | join(" ")
+        ' "$_agent_starts" 2>/dev/null)
     fi
-    # Escalating rung ladder (principal directive 2026-07-06, corrected same day):
-    # EVERY rung renders DIM unless it is the ACTIVE (primary-dispatch) rung.
-    # The escalation lives in the hue — HAIKU green → SONNET blue → OPUS red →
-    # FABLE purple — but inactive rungs show it only as a faint, dark tint;
-    # exactly one rung (state 2) pops in full BOLD color. No strong colors on
-    # inactive rungs, ever. Utility-available (state 1) and off (state 0) look
-    # the same: dim.
-    _ar_rung_c() {  # $1=rung(low|medium|high|max|forge) $2=state(2 active | anything else dim)
+    # FABLE rung: a verified-executed Fable inference in the window. ISO-8601
+    # UTC timestamps compare lexicographically, so string > is a time compare.
+    _mv_file="$LIFEOS_DIR/MEMORY/OBSERVABILITY/model-verification.jsonl"
+    _fable_recent=0
+    if [ -f "$_mv_file" ]; then
+        _mv_cut=$(date -u -r $(( NOW_EPOCH - 300 )) +%Y-%m-%dT%H:%M:%S 2>/dev/null)
+        _mv_hits=$(tail -20 "$_mv_file" 2>/dev/null | jq -s -r --arg cut "$_mv_cut" '
+            [.[] | select((.ts // "") > $cut) | select(.executed // "" | test("fable"))] | length
+        ' 2>/dev/null)
+        [ "${_mv_hits:-0}" -gt 0 ] 2>/dev/null && _fable_recent=1
+    fi
+
+    read -r _rs_max _rs_high _rs_med _rs_low _rs_forge _rs_grok \
+        <<< "$(_pm_roster_states "$model_name" "$_live_models" "$_fable_recent" "$_dispatch_fable")"
+
+    # Escalating rung ladder (principal directive 2026-07-06): EVERY rung renders
+    # DIM unless LIVE. The escalation lives in the hue — HAIKU green → SONNET
+    # blue → OPUS red → FABLE purple — with cross-vendor GPT-5.6 (cyan) and
+    # GROK (silver) behind the divider. Inactive rungs show only a faint, dark
+    # tint; live rungs pop in full BOLD color. No strong colors on inactive
+    # rungs, ever.
+    _ar_rung_c() {  # $1=rung(low|medium|high|max|forge|grok) $2=state(2 live | anything else dim)
         case "$1:$2" in
-            low:2)    printf '\033[1;38;2;74;222;128m'  ;;  # ACTIVE: bold green-400
+            low:2)    printf '\033[1;38;2;74;222;128m'  ;;  # LIVE: bold green-400
             low:*)    printf '\033[2;38;2;86;164;110m'   ;;  # dim: muted green tint
-            medium:2) printf '\033[1;38;2;59;130;246m'  ;;  # ACTIVE: bold blue-500
+            medium:2) printf '\033[1;38;2;59;130;246m'  ;;  # LIVE: bold blue-500
             medium:*) printf '\033[2;38;2;90;130;185m'   ;;  # dim: muted blue tint
-            high:2)   printf '\033[1;38;2;239;68;68m'   ;;  # ACTIVE: bold red-500
+            high:2)   printf '\033[1;38;2;239;68;68m'   ;;  # LIVE: bold red-500
             high:*)   printf '\033[2;38;2;180;95;95m'    ;;  # dim: muted red tint
-            max:2)    printf '\033[1;38;2;168;85;247m'  ;;  # ACTIVE: bold purple-500 — apex
+            max:2)    printf '\033[1;38;2;168;85;247m'  ;;  # LIVE: bold purple-500 — apex
             max:*)    printf '\033[2;38;2;150;110;195m'  ;;  # dim: muted purple tint
-            forge:2)  printf '\033[1;38;2;103;232;249m' ;;  # ACTIVE: bold cyan — cross-vendor
+            forge:2)  printf '\033[1;38;2;103;232;249m' ;;  # LIVE: bold cyan — OpenAI cross-vendor
             forge:*)  printf '\033[2;38;2;85;160;175m'   ;;  # dim: muted cyan tint
+            grok:2)   printf '\033[1;38;2;226;232;240m' ;;  # LIVE: bold silver — xAI cross-vendor
+            grok:*)   printf '\033[2;38;2;125;135;148m'  ;;  # dim: muted gray tint
         esac
     }
     _ar_tok() {  # $1=state $2=rung $3=label
         printf "%b%s${RESET}" "$(_ar_rung_c "$2" "$1")" "$3"
     }
-    _ar_line="${SLATE_400}🤖 MODE:${RESET} "
+    _ar_line="${SLATE_400}ACTIVE:${RESET} "
     _ar_line+="$(_ar_tok "$_rs_low"   low    "$_lbl_low") "
     _ar_line+="$(_ar_tok "$_rs_med"   medium "$_lbl_med") "
     _ar_line+="$(_ar_tok "$_rs_high"  high   "$_lbl_high") "
     _ar_line+="$(_ar_tok "$_rs_max"   max    "$_lbl_max")"
-    # Divider: the Claude rungs above are ONE mutually-exclusive ladder (exactly one
-    # lit). GPT-5.6 (Forge) is a separate VENDOR running alongside, not a rung — so it
-    # sits behind a divider as a "+cross-vendor" add-on, lit only while a Forge
-    # dispatch is live (see _forge_live override above).
+    # Divider: the Claude rungs above are ONE family. Cross-vendor ENGINES
+    # (OpenAI, xAI) run alongside, not as rungs — each sits behind the divider
+    # as a "+engine" add-on, lit only while a dispatch resolved to it is live.
     _ar_line+=" ${SLATE_600}│${RESET} "
-    _ar_line+="$(_ar_tok "$_rs_forge" forge "+$_lbl_forge")"
+    _ar_line+="$(_ar_tok "$_rs_forge" forge "+$_lbl_forge") "
+    _ar_line+="$(_ar_tok "$_rs_grok"  grok  "+$_lbl_grok")"
     printf "%b\n" "$_ar_line"
 fi
 
@@ -1973,6 +2088,7 @@ if [ "${usage_state:-absent}" != "absent" ]; then
 
     # Extra usage display (Max plan overage credits — values in cents)
     extra_display=""
+    credits_off_display=""
     if [ "${usage_extra_enabled:-false}" = "true" ]; then
         extra_limit_dollars=$((${usage_extra_limit:-0} / 100))
         extra_used_dollars=$((${usage_extra_used%%.*} / 100))
@@ -1982,6 +2098,14 @@ if [ "${usage_state:-absent}" != "absent" ]; then
             extra_limit_fmt="\$${extra_limit_dollars}"
         fi
         extra_display="\$${extra_used_dollars:-0}/${extra_limit_fmt}"
+    elif [ "${usage_spend_enabled:-}" = "false" ]; then
+        # Credits pool exists but is switched OFF (e.g. out_of_credits) — show
+        # the dim balance so missing overflow coverage is visible at a glance.
+        _sp_used_c=${usage_spend_used_cents:-0}
+        _sp_limit_c=${usage_spend_limit_cents:-0}
+        _sp_used=$(( ${_sp_used_c%%.*} / 100 ))
+        _sp_limit=$(( ${_sp_limit_c%%.*} / 100 ))
+        [ "$_sp_limit" -gt 0 ] && credits_off_display="CR:\$${_sp_used}/\$${_sp_limit}·OFF"
     fi
 
     # Staleness indicator: dim labels/timestamps only, NEVER dim data values.
@@ -2029,6 +2153,42 @@ if [ "${usage_state:-absent}" != "absent" ]; then
     }
     _reset_5h_fmt=$(_fmt_reset "$reset_5h_day" "$reset_5h_time")
     _reset_7d_fmt=$(_fmt_reset "$reset_7d_day" "$reset_7d_time")
+
+    # Active-window highlight: brighten the label of whichever window is the
+    # currently binding constraint (limits[].is_active from the OAuth payload).
+    # Skipped when stale — a dimmed line must not carry a bright label.
+    _5h_label_color="$_reset_color"
+    _7d_label_color="$_reset_color"
+    if [ "$_usage_is_stale" != true ]; then
+        [ "${usage_5h_active:-false}" = "true" ] && _5h_label_color="$USAGE_PRIMARY"
+        [ "${usage_7d_active:-false}" = "true" ] && _7d_label_color="$USAGE_PRIMARY"
+    fi
+
+    # Scoped per-model weekly window (e.g. FABLE) from the OAuth limits[] array.
+    # Reset time is dropped when it matches WEEK's — same boundary, redundant.
+    scoped_fmt=""
+    if [ "${usage_scoped_present:-false}" = "true" ] && [ -n "${usage_scoped_name:-}" ]; then
+        usage_scoped_int=${usage_scoped_pct%%.*}
+        [ -z "$usage_scoped_int" ] && usage_scoped_int=0
+        # Abbreviate long model names for line width (FABLE → FB)
+        [ "$usage_scoped_name" = "FABLE" ] && usage_scoped_name="FB"
+        usage_scoped_color=$(get_usage_color "$usage_scoped_int")
+        _rsc_fmt=""
+        if [ -n "${usage_scoped_reset:-}" ]; then
+            _rsc_epoch=$(parse_iso_epoch "$usage_scoped_reset")
+            if [ "$_rsc_epoch" -gt 0 ] 2>/dev/null; then
+                _rsc_str=$(reset_time_str "$_rsc_epoch")
+                if [ "$_rsc_str" != "${_r7d_str:-}" ]; then
+                    _rsc_fmt=" ${_reset_color}↻${RESET}$(_fmt_reset "${_rsc_str%%@*}" "${_rsc_str#*@}")"
+                fi
+            fi
+        fi
+        _scoped_label_color="$_reset_color"
+        if [ "$_usage_is_stale" != true ] && [ "${usage_scoped_active:-false}" = "true" ]; then
+            _scoped_label_color="$USAGE_PRIMARY"
+        fi
+        scoped_fmt=" ${_scoped_label_color}${usage_scoped_name}${RESET} ${usage_scoped_color}${usage_scoped_int}%%${RESET}${_rsc_fmt}"
+    fi
     # Billing source indicator — colored = actively billing, slate-dim = inactive.
     # Three-way: SUB (subscription), EXT (Anthropic extra usage credits), API
     # (API-key billing). EXT segment renders only when extra usage is enabled
@@ -2055,9 +2215,10 @@ if [ "${usage_state:-absent}" != "absent" ]; then
         _billing_fmt="${USAGE_EXTRA_ACTIVE}⚡EXT${RESET}"
     else
         _billing_fmt="${USAGE_PRIMARY}SUB${RESET}"
-        [ -n "$extra_display" ] && _billing_fmt="${_billing_fmt} ${SLATE_600}│${RESET} ${USAGE_EXTRA}${extra_display}${RESET}"
+        [ -n "$extra_display" ] && _billing_fmt="${_billing_fmt} ${USAGE_EXTRA}${extra_display}${RESET}"
+        [ -n "$credits_off_display" ] && _billing_fmt="${_billing_fmt} ${USAGE_EXTRA}${credits_off_display}${RESET}"
     fi
-    printf "${_label_color}USE:${RESET} ${_reset_color}5HR${RESET} ${usage_5h_color}${usage_5h_int}%%${RESET} ${_reset_color}↻${RESET}${_reset_5h_fmt} ${SLATE_600}│${RESET} ${_reset_color}WEEK${RESET} ${usage_7d_color}${usage_7d_int}%%${RESET} ${_reset_color}↻${RESET}${_reset_7d_fmt} ${SLATE_600}│${RESET} ${_billing_fmt}"
+    printf "📊 ${_5h_label_color}5HR${RESET} ${usage_5h_color}${usage_5h_int}%%${RESET} ${_reset_color}↻${RESET}${_reset_5h_fmt} ${_7d_label_color}WK${RESET} ${usage_7d_color}${usage_7d_int}%%${RESET} ${_reset_color}↻${RESET}${_reset_7d_fmt}${scoped_fmt} ${_billing_fmt}"
     [ -n "$stale_suffix" ] && printf "${stale_suffix}"
     printf "\n"
     sep

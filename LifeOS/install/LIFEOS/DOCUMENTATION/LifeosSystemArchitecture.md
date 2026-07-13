@@ -1,9 +1,10 @@
 ---
-last_updated: 2026-07-11T00:00:00Z
+last_updated: 2026-07-12T00:00:00Z
 last_updated_by: kai
 convention: pai-freshness-v1
 last_reviewed: 2026-05-04T18:27:00.870Z
 last_reviewed_by: {{PRINCIPAL_NAME}}
+version: 1.9.48
 ---
 
 # What LifeOS is and Why it Exists
@@ -51,7 +52,7 @@ LifeOS targets **AS3** on the [LifeOS Maturity Model](https://example.com/blog/p
 
 **Canonical thesis:** `LIFEOS/DOCUMENTATION/LifeOs/LifeOsThesis.md` — read this first when any framing question comes up. This architecture doc describes *how* the OS is built; the thesis doc describes *what* the OS is for.
 
-**Version:** LifeOS 7.0.0 | Algorithm v8.3.0 | Memory v8.2.0
+**Version:** LifeOS 7.1.1 | Algorithm v8.4.0 | Memory v8.2.0
 
 ---
 
@@ -297,16 +298,22 @@ It used to turn a raw prompt into a posture: mode, effort tier, the stated goal,
 - **Location (surviving model routing):** `LIFEOS/TOOLS/models.ts`, `hooks/AgentInvocation.hook.ts`, `LIFEOS/TOOLS/Inference.ts`
 - **Full doc (history only):** `LIFEOS/DOCUMENTATION/Router/RouterSystem.md`
 
-### Ledger — the Versioning System
+### Versioning
 
-**The versioning authority — assigns the right version to every change and keeps every version number in LifeOS coherent.**
+**How every change gets the right version and every version number stays coherent.** This is a convention plus a set of tools, not a named subsystem — the "Ledger" name (assigned 2026-07-06) was retired 2026-07-12 and its standalone doc folded into this section, which is now the canonical reference.
 
-Classifies each change as Major, Feature, or Patch (`Major.Feature.Patch`, always three levels), bumps the OS umbrella version (`LIFEOS/VERSION`) plus every touched component line (Algorithm, ISA Format, Memory, each skill's `version:`, each hook's `@version`), records it in the update registry, and syncs + tags the private repos. Named + versioned + documented 2026-07-06, closing the same "does the work, never had a name" gap the Router had. Terminal step is `UpdateKaiRepo` (private sync + tag); cutting and publishing releases are the separate, more sensitive `CreateShadowRelease` and `CreateRelease` stages.
+Every live version identifier is exactly three levels, **`Major.Feature.Patch`** — the OS umbrella (`LIFEOS/VERSION`), the Algorithm, the system prompt, the ISA Format spec, Memory, every skill's `version:`, every hook's `@version`, and every living doc's `version:`. The middle number is **Feature**, not "minor." Gates: Major = human conversation before the bump; Feature = one-line confirm at ship time; Patch = auto-applies with a visible notice. Historical changelog entries stay as recorded — no back-filling. The standing rule lives in `OPERATIONAL_RULES.md` § Versioning.
 
-- **Version:** 1.0.0
-- **Status:** Active (named + documented 2026-07-06)
-- **Location:** `skills/_LIFEOS/Tools/{ClassifyChange,UpdateLifeosVersion,BumpAlgorithmVersion,BumpSystemPromptVersion,BumpHookVersions,BumpSkillVersions,CreateUpdate,UpdateKaiRepo}.ts`, `skills/_LIFEOS/Workflows/VersionBump.md`, `LIFEOS/VERSION`
-- **Full doc:** `LIFEOS/DOCUMENTATION/Ledger/LedgerSystem.md`
+Two granularities of the same fact: the **OS umbrella** rolls up every substantive change, while **component lines** (Algorithm, system prompt, skills, hooks, docs, ISA Format, Memory) bump independently and roll into it — which is why a single skill edit bumps both the skill's `version:` and `LIFEOS/VERSION`.
+
+**Living-doc versioning (added 2026-07-12)** — every living Markdown doc carries a frontmatter `version:`, spanning BOTH private repos. The single scope authority is `skills/_LIFEOS/Tools/DocVersionScope.ts`: system repo = `LIFEOS/DOCUMENTATION/**` + `LIFEOS/RULES/**`; user repo = all tracked `*.md`. Excluded: MEMORY/CACHE/Backups archives (back-stamping records is revisionism), generated derivatives (`generator:`/`derived_from:` — they inherit from their source), basename `CLAUDE.md` (the OS umbrella is its version), `CUSTOMIZATIONS/ARBOL/` (own repo), and everything already component-versioned. Baselines were seeded from real git lineage by `SeedDocVersions.ts` (creation → 1.0.0; non-migration commit → patch; commit adding a new `## ` section → feature; `git log --follow`, never combined with `--reverse` — they're silently incompatible). `BumpDocVersions.ts` applies the same new-H2-→-feature rubric deterministically at sync time (never auto-major), with a self-bump guard so a version-line-only diff never re-bumps; both the doc seeder and bumper run inside `UpdateKaiRepo --bump` exactly like skills and hooks.
+
+The flow per change: `ClassifyChange.ts` (diff → `patch | feature | major`; major always human-gated) → `UpdateLifeosVersion.ts` (bump the umbrella) → `Bump{Algorithm,SystemPrompt,Hook,Skill,Doc}Versions.ts` (roll the touched component lines — runs automatically inside `UpdateKaiRepo --bump`) → `CreateUpdate.ts` (append to the update registry) → `UpdateKaiRepo.ts --bump` (verified two-repo private sync + tag). Orchestrated by `skills/_LIFEOS/Workflows/VersionBump.md` (`/vb`); `rc` cuts a release candidate.
+
+Operation vocabulary, never conflated: **UpdateKaiRepo** = private sync + tag (versioning's terminal step, everyday sensitivity) · **CreateShadowRelease** = "cut" (stage + gates, no push) · **CreateRelease** = "publish" to the public repo (extremely sensitive, explicit go-ahead). "Cut" never means "publish"; private-sync ≠ cut ≠ publish.
+
+- **Status:** Active convention (subsystem name "Ledger" retired 2026-07-12; this section is the canonical doc)
+- **Location:** `skills/_LIFEOS/Tools/{ClassifyChange,UpdateLifeosVersion,BumpAlgorithmVersion,BumpSystemPromptVersion,BumpHookVersions,BumpSkillVersions,DocVersionScope,SeedDocVersions,BumpDocVersions,CreateUpdate,UpdateKaiRepo}.ts`, `skills/_LIFEOS/Workflows/VersionBump.md`, `LIFEOS/VERSION`
 
 ### Skill System
 
@@ -578,7 +585,7 @@ System file inventory by pipeline. When you modify a file, trace its pipeline to
 | Pipeline | Key Files |
 |----------|-----------|
 | **Security** | `LIFEOS/LIFEOS_SYSTEM_PROMPT.md` § Security Protocol (constitutional rule), `settings.json` `permissions.deny` (native harness denylist), `hooks/Safety.hook.ts` (consolidated PermissionRequest + PostToolUse on WebFetch \| WebSearch), `hooks/lib/safety-classifier.ts` (shape catalog + shell-aware classifier with single-quote pre-pass) |
-| **Algorithm** | `Algorithm/LATEST` → `Algorithm/v{VERSION}.md` (currently v8.3.0 — the claims restructure: Loop preamble + 15 teeth-annotated done-claims + AlgorithmNudge event layer (unified 2026-07-11: run-scoped + always-on skill-routing/late-ISA/spend); capabilities.md removed at v7, the system-prompt skill list is the sole capability inventory), `Algorithm/mode-detection.md`, `hooks/ISASync.hook.ts` → `MEMORY/WORK/{slug}/ISA.md`, `skills/ISA/` (canonical Scaffold/Append/Reconcile workflows); **work registry event-sourced (2026-06-10):** all `work.json` writes go through `isa-utils.writeRegistry` → field-level diff events appended to `MEMORY/STATE/work-events.jsonl` (`hooks/lib/work-events.ts`) → locked fold to the derived `work.json` snapshot (offset-stamped, 1MB compaction); `readRegistry` serves snapshot+suffix live views; Pulse SSE triggers off `fs.watch` on STATE with the 100ms poll as fallback; model choice is per-dispatch judgment (2026-07-11 baseline); `EFFORT_MODEL` in `LIFEOS/TOOLS/models.ts` remains the `Inference.ts --level` dial |
+| **Algorithm** | `Algorithm/LATEST` → `Algorithm/v{VERSION}.md` (currently v8.4.0 — the claims restructure: Loop preamble + 15 teeth-annotated done-claims + AlgorithmNudge event layer (unified 2026-07-11: run-scoped + always-on skill-routing/late-ISA/spend; depth-directive row added v8.4.0, 2026-07-12); capabilities.md removed at v7, the system-prompt skill list is the sole capability inventory), `Algorithm/mode-detection.md`, `hooks/ISASync.hook.ts` → `MEMORY/WORK/{slug}/ISA.md`, `skills/ISA/` (canonical Scaffold/Append/Reconcile workflows); **work registry event-sourced (2026-06-10):** all `work.json` writes go through `isa-utils.writeRegistry` → field-level diff events appended to `MEMORY/STATE/work-events.jsonl` (`hooks/lib/work-events.ts`) → locked fold to the derived `work.json` snapshot (offset-stamped, 1MB compaction); `readRegistry` serves snapshot+suffix live views; Pulse SSE triggers off `fs.watch` on STATE with the 100ms poll as fallback; model choice is per-dispatch judgment (2026-07-11 baseline); `EFFORT_MODEL` in `LIFEOS/TOOLS/models.ts` remains the `Inference.ts --level` dial |
 | **Memory** | `hooks/WorkCompletionLearning.hook.ts`, `hooks/SatisfactionCapture.hook.ts` (RelationshipMemory hook deleted 7.0.0 — dead code), `Tools/KnowledgeHarvester.ts` → `MEMORY/KNOWLEDGE/`, `MEMORY/LEARNING/`; `Tools/SessionHarvester.ts --mine` → `KNOWLEDGE/_harvest-queue/`; `Tools/MemoryRetriever.ts` (BM25 retrieval over typed-item corpus including `_MEMORY.md` hot-layer files), `Tools/KnowledgeGraph.ts` (graph navigation) — read-only. **Autonomic loop (2026-05):** `hooks/MemoryTurnStart.hook.ts` (UserPromptSubmit) + `hooks/MemoryReviewFire.hook.ts` (Stop; cadence merged 2026-07-11) drive `Tools/MemoryReviewer.ts` on cadence (turn≥8 ∧ minutes≥30 ∧ idle≥2). Reviewer emits typed items routed by `Tools/MemorySystem.ts` (single `add(item)` API) over the `Tools/MemoryTypes.ts` registry; `Tools/MutationTier.ts` gates by tier A/B/C/D. Tier-C proposals enqueue to `MEMORY/OBSERVABILITY/pending-proposals.jsonl`; `PULSE/lib/telegram-proposals.ts` + `PULSE/modules/telegram.ts` surface them as `yes/no/edit #id` Telegram replies. `Tools/MemoryStatus.ts` is the read-only `kai status` CLI. **kb-v3 knowledge schema (2026-07-05):** `Tools/KnowledgeSchema.ts` is the pure-data SoT for the KNOWLEDGE archive object-schema (`person\|company\|idea\|blog\|research` — distinct from the write-registry above) + body-safe parse/normalize/validate; `Tools/KnowledgeLint.ts` validates conformance (envelope % vs per-type completeness); `Tools/MigrateKnowledge.ts` migrated ~4,400 notes onto it (body-byte-preserving, idempotent, dry-run default); `Tools/KnowledgeQuery.ts` (`kb query`) filters/sorts on the now-consistent typed fields; `Tools/GenerateKnowledgeSchemaDoc.ts` regenerates `MEMORY/KNOWLEDGE/_schema.md` from the schema; `MemorySystem.renderInitialNote` emits the kb-v3 envelope so new autonomic notes are born conformant. |
 | **Router** (RETIRED 2026-07-11) | Classify → route-effort stages retired 2026-07-11 with the mode/tier abolition (`TheRouter.hook.ts` deleted; MINIMAL/NATIVE/ALGORITHM + E1–E5 gone, no successor classifier). **Surviving model routing:** `LIFEOS/TOOLS/models.ts` `EFFORT_MODEL` maps level→model (max→fable / high→opus / medium→sonnet / low→haiku; `LEVEL_TO_HARNESS_EFFORT`; cross-vendor pins; egress-class ceilings) → **dispatch** via `model` param on `Agent()` / `Workflow agent()`, injected by `hooks/AgentInvocation.hook.ts` on unspecified dispatches. `LIFEOS/TOOLS/Inference.ts` applies model selection to utility inference, and is the genuine `max`/Fable carrier (subprocess spawns `claude --model claude-fable-5`; Agent `model:fable` dispatch downgrades to Opus). It verifies the executed model against the JSON envelope's `modelUsage` and logs downgrades to `MEMORY/OBSERVABILITY/model-verification.jsonl` (v6.29.0 — reports what RAN, not what was requested). Full doc (history only): `LIFEOS/DOCUMENTATION/Router/RouterSystem.md` |
 | **Hooks** | `hooks/*.hook.ts`, `hooks/handlers/*.ts`, `hooks/lib/*.ts`, `settings.json` |

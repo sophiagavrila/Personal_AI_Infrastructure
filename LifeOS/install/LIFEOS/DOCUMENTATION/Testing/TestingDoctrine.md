@@ -4,6 +4,7 @@ last_updated_by: kai
 convention: pai-freshness-v1
 last_reviewed: 2026-05-08T01:30:00.000Z
 last_reviewed_by: <principal>
+version: 1.0.24
 ---
 
 # LifeOS Testing Doctrine
@@ -324,7 +325,7 @@ Phases 2–5 are tracked separately as PROJECTS.md entries; they're not part of 
 
 ## Cross-references
 
-- Algorithm doctrine on ISA-as-test-harness: `~/.claude/LIFEOS/ALGORITHM/v8.3.0.md` § Doctrine (line 17)
+- Algorithm doctrine on ISA-as-test-harness: `~/.claude/LIFEOS/ALGORITHM/v8.4.0.md` § Doctrine (line 17)
 - ISA format spec: `~/.claude/LIFEOS/DOCUMENTATION/Isa/IsaFormat.md`
 - Bun test docs: <https://bun.sh/docs/cli/test>, <https://bun.sh/docs/test/writing>, <https://bun.sh/docs/test/lifecycle>, <https://bun.sh/docs/test/snapshots>, <https://bun.sh/docs/test/coverage>, <https://bun.sh/docs/test/mocks>
 - Bun's own test doctrine: <https://github.com/oven-sh/bun/blob/main/test/CLAUDE.md>
